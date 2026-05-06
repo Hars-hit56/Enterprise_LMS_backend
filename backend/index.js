@@ -2,22 +2,36 @@ import express from "express";
 import dotenv from "dotenv";
 import connectDb from "./config/connectDB.js";
 import cookieParser from "cookie-parser";
+import cors from "cors";
+
 import authRouter from "./route/authRoute.js";
+import courseRouter from "./route/courseRoute.js";
+import userRouter from "./route/userRoute.js";
+import enrollmentRouter from "./route/enrollmentRoute.js";
+import assessmentRouter from "./route/assessmentRoute.js";
+import analyticsRouter from "./route/analyticsRoute.js";
 
 dotenv.config();
 
 const PORT = process.env.PORT;
 const app = express();
+
 app.use(express.json());
 app.use(cookieParser());
+app.use(cors({
+  origin: "http://localhost:5173",
+  credentials: true
+}));
 
-app.use("/api/auth",authRouter)
+app.use("/api/auth", authRouter);
+app.use("/api/course", courseRouter);
+app.use("/api/user", userRouter);
+app.use("/api/enrollment", enrollmentRouter);
+app.use("/api/assessment", assessmentRouter);
+app.use("/api/analytics", analyticsRouter);
 
 app.get("/", (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "Server is running ",
-  });
+  res.json({ message: "Server running" });
 });
 
 app.listen(PORT, () => {
