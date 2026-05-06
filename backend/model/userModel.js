@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["student", "educator", "administrator"],
+      enum: ["student", "instructor", "admin"],
       required: true,
     },
     photoUrl: {
@@ -39,3 +39,4 @@ const userSchema = new mongoose.Schema(
 const User = mongoose.model("User", userSchema);
 
 export default User;
+

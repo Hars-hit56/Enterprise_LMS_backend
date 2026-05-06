@@ -3,7 +3,6 @@ import validator from "validator";
 import bcrypt from "bcryptjs";
 import genToken from "../config/token.js";
 
-
 // Register
 export const signUp = async (req, res) => {
   try {
@@ -50,7 +49,11 @@ export const signUp = async (req, res) => {
 // Login
 export const login = async (req, res) => {
   try {
+    console.log("Login API hit");
+    console.log("BODY:", req.body);
     const { email, password } = req.body;
+    console.log("Login API hit");
+    console.log("BODY:", req.body);
 
     let user = await User.findOne({ email });
 
@@ -63,7 +66,7 @@ export const login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ message: "Incorrect Password" });
     }
-   
+
     let token = await genToken(user._id);
     res.cookie("token", token, {
       httpOnly: true,
