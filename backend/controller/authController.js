@@ -49,11 +49,7 @@ export const signUp = async (req, res) => {
 // Login
 export const login = async (req, res) => {
   try {
-    console.log("Login API hit");
-    console.log("BODY:", req.body);
     const { email, password } = req.body;
-    console.log("Login API hit");
-    console.log("BODY:", req.body);
 
     let user = await User.findOne({ email });
 
@@ -75,7 +71,16 @@ export const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    return res.status(200).json(user);
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ message: `Login error ${error}` });
   }
