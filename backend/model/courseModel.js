@@ -23,6 +23,14 @@ const courseSchema = new mongoose.Schema(
     price: {
       type: Number,
     },
+    currency: {
+      type: String,
+      default: "INR",
+    },
+    isFree: {
+      type: Boolean,
+      default: false,
+    },
     thumbnail: {
       type: String,
     },
@@ -32,10 +40,15 @@ const courseSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
-    lectures: [
+    modules: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Lecture",
+        moduleTitle: String,
+        lectures: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Lecture",
+          },
+        ],
       },
     ],
     creator: {
