@@ -24,7 +24,7 @@ export const getCurrentUser = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     const userId = req.userId;
-    const { description, name } = req.body;
+    const { description, name, email } = req.body;
     let photoUrl;
 
     if (req.file) {
@@ -34,6 +34,7 @@ export const updateProfile = async (req, res) => {
     const user = await User.findByIdAndUpdate(userId, {
       name,
       description,
+      email,
       photoUrl,
     }, { new: true });
 
@@ -42,7 +43,7 @@ export const updateProfile = async (req, res) => {
     }
 
 
-    return res.status(200).json(user);
+    return res.status(200).json({ message: "Profile updated successfully", user });
   } catch (error) {
     return res.status(500).json({ message: `Update Profile error ${error}` });
   }
