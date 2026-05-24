@@ -9,7 +9,7 @@ export const enrollCourse = async (req, res) => {
     courseId,
   });
 
-  if (exist) return res.json({ message: "Already enrolled" });
+  if (exist) return res.json({ message: "Course already purchased" });
 
   const enrollment = await Enrollment.create({
     userId: req.userId,
@@ -20,7 +20,10 @@ export const enrollCourse = async (req, res) => {
     $push: { enrolledStudents: req.userId },
   });
 
-  res.json(enrollment);
+  res.json({
+    message: "Course purchased successfully",
+    enrollment
+  });
 };
 
 export const getMyCourses = async (req, res) => {

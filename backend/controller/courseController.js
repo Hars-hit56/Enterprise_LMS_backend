@@ -21,15 +21,22 @@ export const createCourse = async (req, res) => {
       return res.status(400).json({ message: "Title or Category is required" });
     }
 
-    let thumbnail;
+    let thumbnail = req.body.thumbnail; // Default to body if provided
     if (req.files && Array.isArray(req.files)) {
       const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnail');
       if (thumbnailFile) {
-        thumbnail = await uploadOnCloudinary(thumbnailFile.path);
+        const uploadedUrl = await uploadOnCloudinary(thumbnailFile.path);
+        if (uploadedUrl) {
+          thumbnail = typeof uploadedUrl === 'string' ? uploadedUrl : uploadedUrl.secure_url;
+        }
       }
-    } else if (req.file) { // Fallback if upload.single was used
-      thumbnail = await uploadOnCloudinary(req.file.path);
+    } else if (req.file) {
+      const uploadedUrl = await uploadOnCloudinary(req.file.path);
+      if (uploadedUrl) {
+        thumbnail = typeof uploadedUrl === 'string' ? uploadedUrl : uploadedUrl.secure_url;
+      }
     }
+    console.log("FINAL THUMBNAIL URL =>", thumbnail);
 
     let parsedModules = [];
     if (modules) {
@@ -47,9 +54,13 @@ export const createCourse = async (req, res) => {
               const expectedVideoField = `video_${moduleIndex}_${lessonIndex}`;
               const videoFile = req.files.find(f => f.fieldname === expectedVideoField);
               if (videoFile) {
-                finalVideoUrl = await uploadOnCloudinary(videoFile.path);
+                const uploadedVideoUrl = await uploadOnCloudinary(videoFile.path);
+                if (uploadedVideoUrl) {
+                  finalVideoUrl = typeof uploadedVideoUrl === 'string' ? uploadedVideoUrl : uploadedVideoUrl.secure_url;
+                }
               }
             }
+            console.log(`LESSON ${lessonIndex} VIDEO URL =>`, finalVideoUrl);
 
             const lecture = await Lecture.create({
               lectureTitle: lesson.title,
@@ -80,7 +91,10 @@ export const createCourse = async (req, res) => {
       modules: parsedModules,
       creator: req.userId,
     });
-    return res.status(201).json(course);
+    const populatedCourse = await Course.findById(course._id)
+      .populate("modules.lectures");
+
+    return res.status(201).json(populatedCourse);
   } catch (error) {
     return res.status(500).json({ message: `CreateCourse error ${error}` });
   }
@@ -90,7 +104,9 @@ export const createCourse = async (req, res) => {
 
 export const getPublishedCourses = async (req, res) => {
   try {
-    const courses = await Course.find({ isPublished: true });
+    const courses = await Course.find({
+      isPublished: true
+    }).populate("modules.lectures");
 
     if (!courses) {
       return res.status(400).json({ message: "Courses is not found" });
@@ -138,14 +154,20 @@ export const editCourse = async (req, res) => {
       modules
     } = req.body;
 
-    let thumbnail;
+    let thumbnail = req.body.thumbnail;
     if (req.files && Array.isArray(req.files)) {
       const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnail');
       if (thumbnailFile) {
-        thumbnail = await uploadOnCloudinary(thumbnailFile.path);
+        const uploadedUrl = await uploadOnCloudinary(thumbnailFile.path);
+        if (uploadedUrl) {
+          thumbnail = typeof uploadedUrl === 'string' ? uploadedUrl : uploadedUrl.secure_url;
+        }
       }
     } else if (req.file) {
-      thumbnail = await uploadOnCloudinary(req.file.path);
+      const uploadedUrl = await uploadOnCloudinary(req.file.path);
+      if (uploadedUrl) {
+        thumbnail = typeof uploadedUrl === 'string' ? uploadedUrl : uploadedUrl.secure_url;
+      }
     }
 
     let course = await Course.findById(courseId);
@@ -182,7 +204,10 @@ export const editCourse = async (req, res) => {
               const expectedVideoField = `video_${moduleIndex}_${lessonIndex}`;
               const videoFile = req.files.find(f => f.fieldname === expectedVideoField);
               if (videoFile) {
-                finalVideoUrl = await uploadOnCloudinary(videoFile.path);
+                const uploadedVideoUrl = await uploadOnCloudinary(videoFile.path);
+                if (uploadedVideoUrl) {
+                  finalVideoUrl = typeof uploadedVideoUrl === 'string' ? uploadedVideoUrl : uploadedVideoUrl.secure_url;
+                }
               }
             }
 
@@ -228,10 +253,10 @@ export const editCourse = async (req, res) => {
       description,
       category,
       level: difficulty || level,
-      isPublished: isPublished === "true",
+      isPublished,
       price,
       currency,
-      isFree: isFree === "true",
+      isFree,
     };
     if (thumbnail) updateData.thumbnail = thumbnail;
     if (parsedModules) updateData.modules = parsedModules;
@@ -260,7 +285,12 @@ export const getCourseById = async (req, res) => {
       return res.status(400).json({ message: "Courses are not found" });
     }
 
-    return res.status(200).json(course);
+    const isEnrolled = course.enrolledStudents.includes(req.userId);
+
+    return res.status(200).json({
+      course,
+      isEnrolled
+    });
   } catch (error) {
     return res
       .status(500)

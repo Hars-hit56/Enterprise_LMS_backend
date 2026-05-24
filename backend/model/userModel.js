@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema(
       enum: ["student", "instructor", "admin"],
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["Active", "Inactive", "Suspended"],
+      default: "Active",
+    },
     photoUrl: {
       type: String,
       default: "",
