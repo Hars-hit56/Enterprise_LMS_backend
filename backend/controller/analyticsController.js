@@ -130,6 +130,43 @@ export const getInstructorStats = async (req, res) => {
   }
 };
 
+export const getInstructorStudents = async (req, res) => {
+  try {
+    const instructorId = req.userId;
+    const courses = await Course.find({ creator: instructorId }).populate({
+      path: "enrolledStudents",
+      select: "name email role status createdAt",
+    });
+
+    const studentMap = new Map();
+
+    courses.forEach((course) => {
+      course.enrolledStudents.forEach((student) => {
+        if (!studentMap.has(student._id.toString())) {
+          studentMap.set(student._id.toString(), {
+            id: student._id,
+            name: student.name,
+            email: student.email,
+            role: student.role,
+            status: student.status,
+            joined: student.createdAt,
+          });
+        }
+      });
+    });
+
+    const students = Array.from(studentMap.values());
+
+    res.json({
+      success: true,
+      students,
+    });
+  } catch (error) {
+    console.error("GetInstructorStudents Error:", error);
+    res.status(500).json({ message: "Failed to fetch students" });
+  }
+};
+
 export const getStudentStats = async (req, res) => {
   res.json({
     enrolledCourses: 3,
