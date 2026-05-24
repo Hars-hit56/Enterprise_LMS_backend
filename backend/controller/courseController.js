@@ -21,7 +21,7 @@ export const createCourse = async (req, res) => {
       return res.status(400).json({ message: "Title or Category is required" });
     }
 
-    let thumbnail = req.body.thumbnail;
+    let thumbnail = (req.body.thumbnail && typeof req.body.thumbnail === 'string') ? req.body.thumbnail : "";
     if (req.files && Array.isArray(req.files)) {
       const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnail');
       if (thumbnailFile) {
@@ -150,7 +150,7 @@ export const editCourse = async (req, res) => {
       modules
     } = req.body;
 
-    let thumbnail = req.body.thumbnail;
+    let thumbnail = (req.body.thumbnail && typeof req.body.thumbnail === 'string') ? req.body.thumbnail : "";
     if (req.files && Array.isArray(req.files)) {
       const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnail');
       if (thumbnailFile) {
