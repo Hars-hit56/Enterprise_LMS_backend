@@ -21,20 +21,16 @@ export const createCourse = async (req, res) => {
       return res.status(400).json({ message: "Title or Category is required" });
     }
 
-    let thumbnail = req.body.thumbnail; // Default to body if provided
+    let thumbnail = req.body.thumbnail;
     if (req.files && Array.isArray(req.files)) {
       const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnail');
       if (thumbnailFile) {
         const uploadedUrl = await uploadOnCloudinary(thumbnailFile.path);
-        if (uploadedUrl) {
-          thumbnail = typeof uploadedUrl === 'string' ? uploadedUrl : uploadedUrl.secure_url;
-        }
+        if (uploadedUrl) thumbnail = uploadedUrl;
       }
     } else if (req.file) {
       const uploadedUrl = await uploadOnCloudinary(req.file.path);
-      if (uploadedUrl) {
-        thumbnail = typeof uploadedUrl === 'string' ? uploadedUrl : uploadedUrl.secure_url;
-      }
+      if (uploadedUrl) thumbnail = uploadedUrl;
     }
     console.log("FINAL THUMBNAIL URL =>", thumbnail);
 
@@ -56,7 +52,7 @@ export const createCourse = async (req, res) => {
               if (videoFile) {
                 const uploadedVideoUrl = await uploadOnCloudinary(videoFile.path);
                 if (uploadedVideoUrl) {
-                  finalVideoUrl = typeof uploadedVideoUrl === 'string' ? uploadedVideoUrl : uploadedVideoUrl.secure_url;
+                  finalVideoUrl = uploadedVideoUrl;
                 }
               }
             }
@@ -159,15 +155,11 @@ export const editCourse = async (req, res) => {
       const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnail');
       if (thumbnailFile) {
         const uploadedUrl = await uploadOnCloudinary(thumbnailFile.path);
-        if (uploadedUrl) {
-          thumbnail = typeof uploadedUrl === 'string' ? uploadedUrl : uploadedUrl.secure_url;
-        }
+        if (uploadedUrl) thumbnail = uploadedUrl;
       }
     } else if (req.file) {
       const uploadedUrl = await uploadOnCloudinary(req.file.path);
-      if (uploadedUrl) {
-        thumbnail = typeof uploadedUrl === 'string' ? uploadedUrl : uploadedUrl.secure_url;
-      }
+      if (uploadedUrl) thumbnail = uploadedUrl;
     }
 
     let course = await Course.findById(courseId);
@@ -206,7 +198,7 @@ export const editCourse = async (req, res) => {
               if (videoFile) {
                 const uploadedVideoUrl = await uploadOnCloudinary(videoFile.path);
                 if (uploadedVideoUrl) {
-                  finalVideoUrl = typeof uploadedVideoUrl === 'string' ? uploadedVideoUrl : uploadedVideoUrl.secure_url;
+                  finalVideoUrl = uploadedVideoUrl;
                 }
               }
             }
