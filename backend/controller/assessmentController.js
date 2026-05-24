@@ -1,5 +1,6 @@
 import Assessment from "../model/assessmentModel.js";
 import AssessmentResult from "../model/assessmentResultModel.js";
+import Course from "../model/courseModel.js";
 
 // CREATE ASSESSMENT
 export const createAssessment = async (req, res) => {
@@ -150,5 +151,58 @@ export const getAssessmentResult = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+// UPDATE ASSESSMENT
+export const updateAssessment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assessment = await Assessment.findById(id);
+
+    if (!assessment) {
+      return res.status(404).json({ success: false, message: "Assessment not found" });
+    }
+
+    const course = await Course.findById(assessment.courseId);
+    if (!course || course.creator.toString() !== req.userId) {
+      return res.status(403).json({ success: false, message: "Unauthorized to update this assessment" });
+    }
+
+    const updatedAssessment = await Assessment.findByIdAndUpdate(id, req.body, { new: true });
+
+    res.status(200).json({
+      success: true,
+      message: "Assessment updated successfully",
+      assessment: updatedAssessment,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE ASSESSMENT
+export const deleteAssessment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const assessment = await Assessment.findById(id);
+
+    if (!assessment) {
+      return res.status(404).json({ success: false, message: "Assessment not found" });
+    }
+
+    const course = await Course.findById(assessment.courseId);
+    if (!course || course.creator.toString() !== req.userId) {
+      return res.status(403).json({ success: false, message: "Unauthorized to delete this assessment" });
+    }
+
+    await Assessment.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Assessment deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };
