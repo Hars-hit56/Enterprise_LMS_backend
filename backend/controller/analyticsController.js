@@ -5,14 +5,97 @@ import AssessmentResult from "../model/assessmentResultModel.js";
 import Assessment from "../model/assessmentModel.js";
 
 export const getAdminStats = async (req, res) => {
-  const users = await User.countDocuments();
-  const courses = await Course.countDocuments();
+  try {
+    const totalUsers = await User.countDocuments();
+    const totalCourses = await Course.countDocuments();
+    const totalInstructor = await User.countDocuments({ role: "instructor" });
+    const totalStudents = await User.countDocuments({ role: "student" });
+    const totalEnrolledStudent = await Enrollment.countDocuments();
+    
+    // Revenue and Lessons Calculation
+    const allCourses = await Course.find();
+    let totalRevenue = 0;
+    let totalLessons = 0;
 
-  res.json({
-    totalUsers: users,
-    activeCourses: courses,
-    completionRate: 70,
-  });
+    allCourses.forEach(course => {
+      const price = course.price || 0;
+      const enrollments = course.enrolledStudents ? course.enrolledStudents.length : 0;
+      totalRevenue += price * enrollments;
+
+      if (course.modules) {
+        course.modules.forEach(mod => {
+          if (mod.lectures) totalLessons += mod.lectures.length;
+        });
+      }
+    });
+
+    // --- GRAPHS DATA ---
+
+    // 1. User Engagement (Last 7 Days)
+    const engagementData = [];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayName = days[(date.getDay() + 6) % 7]; // Adjust to start Mon
+      
+      const dayStart = new Date(date.setHours(0,0,0,0));
+      const dayEnd = new Date(date.setHours(23,59,59,999));
+
+      // Active Users: Users who enrolled or interacted today
+      const activeCount = await Enrollment.countDocuments({
+        createdAt: { $gte: dayStart, $lte: dayEnd }
+      });
+
+      // Total Users: Cumulative users up to this day
+      const cumulativeUsers = await User.countDocuments({
+        createdAt: { $lte: dayEnd }
+      });
+
+      engagementData.push({
+        name: dayName,
+        activeUsers: activeCount,
+        totalUsers: cumulativeUsers
+      });
+    }
+
+    // 2. Progress Tracking (Last 6 Weeks)
+    const progressData = [];
+    const allEnrollments = await Enrollment.find();
+
+    for (let i = 5; i >= 0; i--) {
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() - (i * 7));
+      
+      const enrollmentsUpToNow = allEnrollments.filter(e => new Date(e.createdAt) <= weekEnd);
+      const avgProgress = enrollmentsUpToNow.length > 0
+        ? enrollmentsUpToNow.reduce((acc, curr) => acc + (curr.progress || 0), 0) / enrollmentsUpToNow.length
+        : 0;
+
+      progressData.push({
+        name: `Week ${6 - i}`,
+        progress: Math.round(avgProgress)
+      });
+    }
+
+    res.json({
+      totalUsers,
+      totalCourses,
+      totalInstructor,
+      totalStudents,
+      totalEnrolledStudent,
+      totalRevenue,
+      totalLessons,
+      activeCourses: totalCourses, // Existing field mapping
+      completionRate: 70, // Placeholder
+      engagementData,
+      progressData
+    });
+  } catch (error) {
+    console.error("Admin Stats Error:", error);
+    res.status(500).json({ message: "Failed to fetch admin stats" });
+  }
 };
 
 export const getInstructorStats = async (req, res) => {
