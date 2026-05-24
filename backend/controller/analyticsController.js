@@ -11,8 +11,9 @@ export const getAdminStats = async (req, res) => {
     const totalInstructor = await User.countDocuments({ role: "instructor" });
     const totalStudents = await User.countDocuments({ role: "student" });
     const enrolledStudentIds = await Enrollment.distinct("userId");
+
     const totalEnrolledStudent = enrolledStudentIds.length;
-    
+
     // Revenue and Lessons Calculation
     const allCourses = await Course.find();
     let totalRevenue = 0;
@@ -35,14 +36,14 @@ export const getAdminStats = async (req, res) => {
     // 1. User Engagement (Last 7 Days)
     const engagementData = [];
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    
+
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dayName = days[(date.getDay() + 6) % 7]; // Adjust to start Mon
-      
-      const dayStart = new Date(date.setHours(0,0,0,0));
-      const dayEnd = new Date(date.setHours(23,59,59,999));
+
+      const dayStart = new Date(date.setHours(0, 0, 0, 0));
+      const dayEnd = new Date(date.setHours(23, 59, 59, 999));
 
       // Active Users: Users who enrolled or interacted today
       const activeCount = await Enrollment.countDocuments({
@@ -68,7 +69,7 @@ export const getAdminStats = async (req, res) => {
     for (let i = 5; i >= 0; i--) {
       const weekEnd = new Date();
       weekEnd.setDate(weekEnd.getDate() - (i * 7));
-      
+
       const enrollmentsUpToNow = allEnrollments.filter(e => new Date(e.createdAt) <= weekEnd);
       const avgProgress = enrollmentsUpToNow.length > 0
         ? enrollmentsUpToNow.reduce((acc, curr) => acc + (curr.progress || 0), 0) / enrollmentsUpToNow.length
@@ -123,7 +124,7 @@ export const getInstructorStats = async (req, res) => {
         course.enrolledStudents.forEach((studentId) => {
           uniqueStudents.add(studentId.toString());
         });
-        
+
         const coursePrice = course.price || 0;
         totalRevenue += coursePrice * course.enrolledStudents.length;
       }
@@ -150,17 +151,17 @@ export const getInstructorStats = async (req, res) => {
 
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const engagementData = [];
-    
+
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dayName = days[date.getDay()];
-      
-      const enrollCount = recentEnrollments.filter(e => 
+
+      const enrollCount = recentEnrollments.filter(e =>
         new Date(e.createdAt).toDateString() === date.toDateString()
       ).length;
 
-      const submissionCount = recentSubmissions.filter(s => 
+      const submissionCount = recentSubmissions.filter(s =>
         new Date(s.createdAt).toDateString() === date.toDateString()
       ).length;
 
@@ -176,27 +177,27 @@ export const getInstructorStats = async (req, res) => {
     sixWeeksAgo.setDate(sixWeeksAgo.getDate() - 42); // 6 * 7 days
 
     const allEnrollments = await Enrollment.find({ courseId: { $in: courseIds } });
-    
+
     const progressData = [];
     for (let i = 5; i >= 0; i--) {
-        const weekEnd = new Date();
-        weekEnd.setDate(weekEnd.getDate() - (i * 7));
-        const weekStart = new Date(weekEnd);
-        weekStart.setDate(weekStart.getDate() - 7);
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() - (i * 7));
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 7);
 
-        const enrollmentsInWeek = allEnrollments.filter(e => {
-            const created = new Date(e.createdAt);
-            return created <= weekEnd;
-        });
+      const enrollmentsInWeek = allEnrollments.filter(e => {
+        const created = new Date(e.createdAt);
+        return created <= weekEnd;
+      });
 
-        const avgProgress = enrollmentsInWeek.length > 0
-            ? enrollmentsInWeek.reduce((acc, curr) => acc + (curr.progress || 0), 0) / enrollmentsInWeek.length
-            : 0;
+      const avgProgress = enrollmentsInWeek.length > 0
+        ? enrollmentsInWeek.reduce((acc, curr) => acc + (curr.progress || 0), 0) / enrollmentsInWeek.length
+        : 0;
 
-        progressData.push({
-            name: `Week ${6 - i}`,
-            progress: Math.round(avgProgress)
-        });
+      progressData.push({
+        name: `Week ${6 - i}`,
+        progress: Math.round(avgProgress)
+      });
     }
 
     res.json({
