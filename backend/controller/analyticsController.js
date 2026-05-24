@@ -10,7 +10,8 @@ export const getAdminStats = async (req, res) => {
     const totalCourses = await Course.countDocuments();
     const totalInstructor = await User.countDocuments({ role: "instructor" });
     const totalStudents = await User.countDocuments({ role: "student" });
-    const totalEnrolledStudent = await Enrollment.countDocuments();
+    const enrolledStudentIds = await Enrollment.distinct("userId");
+    const totalEnrolledStudent = enrolledStudentIds.length;
     
     // Revenue and Lessons Calculation
     const allCourses = await Course.find();
