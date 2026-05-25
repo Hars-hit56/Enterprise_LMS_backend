@@ -39,6 +39,67 @@ export const getAssessmentByCourse = async (req, res) => {
   }
 };
 
+// GET ASSESSMENTS FOR INSTRUCTOR
+export const getInstructorAssessments = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    const course = await Course.findOne({
+      _id: courseId,
+      creator: req.userId,
+    }).select("title");
+
+    if (!course) {
+      return res.status(404).json({
+        success: false,
+        message: "Course not found",
+      });
+    }
+
+    const assessments = await Assessment.find({ courseId })
+      .populate("courseId", "title")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const submissionCounts = await AssessmentResult.aggregate([
+      {
+        $match: {
+          assessmentId: { $in: assessments.map((assessment) => assessment._id) },
+        },
+      },
+      {
+        $group: {
+          _id: "$assessmentId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const submissionsByAssessment = new Map(
+      submissionCounts.map((item) => [item._id.toString(), item.count]),
+    );
+
+    const formattedAssessments = assessments.map((assessment) => ({
+      id: assessment._id.toString(),
+      course: assessment.courseId?.title || "",
+      title: assessment.title,
+      createdAt: assessment.createdAt,
+      submissions: submissionsByAssessment.get(assessment._id.toString()) || 0,
+      passingScore: assessment.passingScore,
+    }));
+
+    res.status(200).json({
+      success: true,
+      assessments: formattedAssessments,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // SUBMIT ASSESSMENT
 export const submitAssessment = async (req, res) => {
   try {

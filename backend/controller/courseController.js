@@ -14,16 +14,19 @@ export const createCourse = async (req, res) => {
       price,
       currency,
       isFree,
-      modules
+      modules,
     } = req.body;
 
     if (!title || !category) {
       return res.status(400).json({ message: "Title or Category is required" });
     }
 
-    let thumbnail = (req.body.thumbnail && typeof req.body.thumbnail === 'string') ? req.body.thumbnail : "";
+    let thumbnail =
+      req.body.thumbnail && typeof req.body.thumbnail === "string"
+        ? req.body.thumbnail
+        : "";
     if (req.files && Array.isArray(req.files)) {
-      const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnail');
+      const thumbnailFile = req.files.find((f) => f.fieldname === "thumbnail");
       if (thumbnailFile) {
         const uploadedUrl = await uploadOnCloudinary(thumbnailFile.path);
         if (uploadedUrl) thumbnail = uploadedUrl;
@@ -36,7 +39,8 @@ export const createCourse = async (req, res) => {
 
     let parsedModules = [];
     if (modules) {
-      const modulesData = typeof modules === 'string' ? JSON.parse(modules) : modules;
+      const modulesData =
+        typeof modules === "string" ? JSON.parse(modules) : modules;
       let moduleIndex = 0;
       for (const mod of modulesData) {
         const moduleLectures = [];
@@ -48,9 +52,13 @@ export const createCourse = async (req, res) => {
             // Check if there's an uploaded file for this lesson video
             if (req.files && Array.isArray(req.files)) {
               const expectedVideoField = `video_${moduleIndex}_${lessonIndex}`;
-              const videoFile = req.files.find(f => f.fieldname === expectedVideoField);
+              const videoFile = req.files.find(
+                (f) => f.fieldname === expectedVideoField,
+              );
               if (videoFile) {
-                const uploadedVideoUrl = await uploadOnCloudinary(videoFile.path);
+                const uploadedVideoUrl = await uploadOnCloudinary(
+                  videoFile.path,
+                );
                 if (uploadedVideoUrl) {
                   finalVideoUrl = uploadedVideoUrl;
                 }
@@ -61,7 +69,7 @@ export const createCourse = async (req, res) => {
             const lecture = await Lecture.create({
               lectureTitle: lesson.title,
               videoUrl: finalVideoUrl,
-              isPreviewFree: lesson.isFree || false
+              isPreviewFree: lesson.isFree || false,
             });
             moduleLectures.push(lecture._id);
             lessonIndex++;
@@ -69,7 +77,7 @@ export const createCourse = async (req, res) => {
         }
         parsedModules.push({
           moduleTitle: mod.title,
-          lectures: moduleLectures
+          lectures: moduleLectures,
         });
         moduleIndex++;
       }
@@ -87,8 +95,9 @@ export const createCourse = async (req, res) => {
       modules: parsedModules,
       creator: req.userId,
     });
-    const populatedCourse = await Course.findById(course._id)
-      .populate("modules.lectures");
+    const populatedCourse = await Course.findById(course._id).populate(
+      "modules.lectures",
+    );
 
     return res.status(201).json(populatedCourse);
   } catch (error) {
@@ -101,8 +110,10 @@ export const createCourse = async (req, res) => {
 export const getPublishedCourses = async (req, res) => {
   try {
     const courses = await Course.find({
-      isPublished: true
-    }).populate("modules.lectures").populate("creator", "name photoUrl");
+      isPublished: true,
+    })
+      .populate("modules.lectures")
+      .populate("creator", "name photoUrl");
 
     if (!courses) {
       return res.status(400).json({ message: "Courses is not found" });
@@ -115,12 +126,72 @@ export const getPublishedCourses = async (req, res) => {
   }
 };
 
+export const getAdminCourses = async (req, res) => {
+  try {
+    const courses = await Course.find()
+      .select(
+        "title category price currency isFree thumbnail enrolledStudents creator isPublished createdAt updatedAt",
+      )
+      .populate("creator", "name email")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const adminCourses = courses.map((course) => {
+      const students = course.enrolledStudents?.length || 0;
+
+      const price = course.isFree ? 0 : Number(course.price || 0);
+
+      const revenue = students * price;
+
+      return {
+        _id: course._id,
+
+        course: course.title,
+
+        students,
+
+        category: course.category,
+
+        revenue,
+
+        price,
+
+        currency: course.currency || "INR",
+
+        isFree: course.isFree || false,
+
+        isPublished: course.isPublished,
+
+        createdAt: course.createdAt,
+
+        updatedAt: course.updatedAt,
+
+        creator: {
+          id: course.creator?._id || null,
+          name: course.creator?.name || "Unknown",
+          email: course.creator?.email || "",
+        },
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      totalCourses: adminCourses.length,
+      courses: adminCourses,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: `Failed to get admin courses ${error}`,
+    });
+  }
+};
+
 export const getCreatorCourses = async (req, res) => {
   try {
     const userId = req.userId;
     const courses = await Course.find({ creator: userId }).populate({
-      path: 'modules.lectures',
-      model: 'Lecture'
+      path: "modules.lectures",
+      model: "Lecture",
     });
     if (!courses) {
       return res.status(400).json({ message: "Courses are not found" });
@@ -147,12 +218,15 @@ export const editCourse = async (req, res) => {
       price,
       currency,
       isFree,
-      modules
+      modules,
     } = req.body;
 
-    let thumbnail = (req.body.thumbnail && typeof req.body.thumbnail === 'string') ? req.body.thumbnail : "";
+    let thumbnail =
+      req.body.thumbnail && typeof req.body.thumbnail === "string"
+        ? req.body.thumbnail
+        : "";
     if (req.files && Array.isArray(req.files)) {
-      const thumbnailFile = req.files.find(f => f.fieldname === 'thumbnail');
+      const thumbnailFile = req.files.find((f) => f.fieldname === "thumbnail");
       if (thumbnailFile) {
         const uploadedUrl = await uploadOnCloudinary(thumbnailFile.path);
         if (uploadedUrl) thumbnail = uploadedUrl;
@@ -172,7 +246,9 @@ export const editCourse = async (req, res) => {
     if (course.modules && course.modules.length > 0) {
       for (const mod of course.modules) {
         if (mod.lectures && mod.lectures.length > 0) {
-          mod.lectures.forEach(lId => originalLectureIds.push(lId.toString()));
+          mod.lectures.forEach((lId) =>
+            originalLectureIds.push(lId.toString()),
+          );
         }
       }
     }
@@ -181,7 +257,8 @@ export const editCourse = async (req, res) => {
     const incomingLectureIds = []; // Track lectures kept by the frontend
 
     if (modules) {
-      const modulesData = typeof modules === 'string' ? JSON.parse(modules) : modules;
+      const modulesData =
+        typeof modules === "string" ? JSON.parse(modules) : modules;
       parsedModules = [];
       let moduleIndex = 0;
       for (const mod of modulesData) {
@@ -194,9 +271,13 @@ export const editCourse = async (req, res) => {
             // Check if there's an uploaded file for this lesson video
             if (req.files && Array.isArray(req.files)) {
               const expectedVideoField = `video_${moduleIndex}_${lessonIndex}`;
-              const videoFile = req.files.find(f => f.fieldname === expectedVideoField);
+              const videoFile = req.files.find(
+                (f) => f.fieldname === expectedVideoField,
+              );
               if (videoFile) {
-                const uploadedVideoUrl = await uploadOnCloudinary(videoFile.path);
+                const uploadedVideoUrl = await uploadOnCloudinary(
+                  videoFile.path,
+                );
                 if (uploadedVideoUrl) {
                   finalVideoUrl = uploadedVideoUrl;
                 }
@@ -207,7 +288,7 @@ export const editCourse = async (req, res) => {
             if (lessonId && mongoose.Types.ObjectId.isValid(lessonId)) {
               const updatePayload = {
                 lectureTitle: lesson.title,
-                isPreviewFree: lesson.isFree || false
+                isPreviewFree: lesson.isFree || false,
               };
               if (finalVideoUrl) updatePayload.videoUrl = finalVideoUrl;
 
@@ -218,7 +299,7 @@ export const editCourse = async (req, res) => {
               const lecture = await Lecture.create({
                 lectureTitle: lesson.title,
                 videoUrl: finalVideoUrl,
-                isPreviewFree: lesson.isFree || false
+                isPreviewFree: lesson.isFree || false,
               });
               moduleLectures.push(lecture._id);
             }
@@ -227,14 +308,16 @@ export const editCourse = async (req, res) => {
         }
         parsedModules.push({
           moduleTitle: mod.title,
-          lectures: moduleLectures
+          lectures: moduleLectures,
         });
         moduleIndex++;
       }
     }
 
     // Delete orphaned lectures
-    const lecturesToDelete = originalLectureIds.filter(id => !incomingLectureIds.includes(id));
+    const lecturesToDelete = originalLectureIds.filter(
+      (id) => !incomingLectureIds.includes(id),
+    );
     if (lecturesToDelete.length > 0) {
       await Lecture.deleteMany({ _id: { $in: lecturesToDelete } });
     }
@@ -256,8 +339,8 @@ export const editCourse = async (req, res) => {
     course = await Course.findByIdAndUpdate(courseId, updateData, {
       new: true,
     }).populate({
-      path: 'modules.lectures',
-      model: 'Lecture'
+      path: "modules.lectures",
+      model: "Lecture",
     });
     return res.status(200).json(course);
   } catch (error) {
@@ -271,8 +354,8 @@ export const getCourseById = async (req, res) => {
 
     let course = await Course.findById(courseId)
       .populate({
-        path: 'modules.lectures',
-        model: 'Lecture'
+        path: "modules.lectures",
+        model: "Lecture",
       })
       .populate("creator", "name photoUrl");
     if (!course) {
@@ -283,7 +366,7 @@ export const getCourseById = async (req, res) => {
 
     return res.status(200).json({
       course,
-      isEnrolled
+      isEnrolled,
     });
   } catch (error) {
     return res
@@ -318,8 +401,6 @@ export const removeCourse = async (req, res) => {
       .json({ message: `failed to Delete Courses  ${error}` });
   }
 };
-
-
 
 // Get the Creator
 

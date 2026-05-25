@@ -8,6 +8,8 @@ export const getAdminStats = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
     const totalCourses = await Course.countDocuments();
+    const activeCourses = await Course.countDocuments({ isPublished: true });
+    const totalAdmin = await User.countDocuments({ role: "admin" });
     const totalInstructor = await User.countDocuments({ role: "instructor" });
     const totalStudents = await User.countDocuments({ role: "student" });
     const enrolledStudentIds = await Enrollment.distinct("userId");
@@ -84,12 +86,13 @@ export const getAdminStats = async (req, res) => {
     res.json({
       totalUsers,
       totalCourses,
+      totalAdmin,
       totalInstructor,
       totalStudents,
       totalEnrolledStudent,
       totalRevenue,
       totalLessons,
-      activeCourses: totalCourses, // Existing field mapping
+      activeCourses,
       completionRate: 70, // Placeholder
       engagementData,
       progressData
