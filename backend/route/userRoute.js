@@ -1,7 +1,14 @@
 import express from "express";
 import isAuth from "../middleware/isAuth.js";
-import { getCurrentUser, updateProfile, getAllUsers, updateUserByAdmin, deleteUserByAdmin } from "../controller/userController.js";
-import { isAdmin } from "../middleware/roleMiddleware.js";
+import {
+  getCurrentUser,
+  updateProfile,
+  getAllUsers,
+  updateUserByAdmin,
+  updateUserByInstructor,
+  deleteUserByAdmin,
+} from "../controller/userController.js";
+import { isAdmin, isInstructor } from "../middleware/roleMiddleware.js";
 import upload from "../middleware/multer.js";
 
 const userRouter = express.Router();
@@ -14,5 +21,8 @@ userRouter.put("/updateprofile", isAuth, upload.single("photoUrl"), updateProfil
 userRouter.get("/admin/users", isAuth, isAdmin, getAllUsers);
 userRouter.put("/admin/users/:id", isAuth, isAdmin, updateUserByAdmin);
 userRouter.delete("/admin/users/:id", isAuth, isAdmin, deleteUserByAdmin);
+
+// Instructor Routes
+userRouter.put("/instructor/users/:id", isAuth, isInstructor, updateUserByInstructor);
 
 export default userRouter;
