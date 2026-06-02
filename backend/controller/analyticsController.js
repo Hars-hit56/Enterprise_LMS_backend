@@ -9,6 +9,28 @@ const normalizeProgress = (progress) => {
   return Math.min(Math.max(value, 0), 100);
 };
 
+const getCourseLectureIds = (course) => {
+  if (!course?.modules) return [];
+
+  return course.modules.flatMap((module) =>
+    (module.lectures || []).map((lectureId) => lectureId.toString()),
+  );
+};
+
+const calculateEnrollmentProgress = (enrollment, course) => {
+  const courseLectureIds = getCourseLectureIds(course);
+  if (!courseLectureIds.length) return normalizeProgress(enrollment.progress);
+
+  const courseLectureIdSet = new Set(courseLectureIds);
+  const completedLectureIds = new Set(
+    (enrollment.completedLectures || [])
+      .map((lectureId) => lectureId.toString())
+      .filter((lectureId) => courseLectureIdSet.has(lectureId)),
+  );
+
+  return Math.round((completedLectureIds.size / courseLectureIds.length) * 100);
+};
+
 const buildCourseProgressData = (courses, enrollments) => {
   const enrollmentsByCourse = new Map();
 
@@ -24,7 +46,7 @@ const buildCourseProgressData = (courses, enrollments) => {
   return courses.map((course) => {
     const courseEnrollments = enrollmentsByCourse.get(course._id.toString()) || [];
     const totalProgress = courseEnrollments.reduce(
-      (sum, enrollment) => sum + normalizeProgress(enrollment.progress),
+      (sum, enrollment) => sum + calculateEnrollmentProgress(enrollment, course),
       0,
     );
     const progress = courseEnrollments.length
@@ -36,7 +58,7 @@ const buildCourseProgressData = (courses, enrollments) => {
       progress,
       enrollments: courseEnrollments.length,
       completed: courseEnrollments.filter(
-        (enrollment) => normalizeProgress(enrollment.progress) >= 100,
+        (enrollment) => calculateEnrollmentProgress(enrollment, course) >= 100,
       ).length,
     };
   });
@@ -105,9 +127,15 @@ export const getAdminStats = async (req, res) => {
 
     // 2. Course Progress Tracking
     const progressData = buildCourseProgressData(allCourses, allEnrollments);
-    const completedEnrollments = allEnrollments.filter(
-      (enrollment) => normalizeProgress(enrollment.progress) >= 100,
-    ).length;
+    const coursesById = new Map(
+      allCourses.map((course) => [course._id.toString(), course]),
+    );
+    const completedEnrollments = allEnrollments.filter((enrollment) => {
+      const course = coursesById.get(enrollment.courseId?.toString());
+      if (!course) return false;
+
+      return calculateEnrollmentProgress(enrollment, course) >= 100;
+    }).length;
     const completionRate = allEnrollments.length
       ? Math.round((completedEnrollments / allEnrollments.length) * 100)
       : 0;
