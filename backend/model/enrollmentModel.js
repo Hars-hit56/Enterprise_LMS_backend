@@ -14,6 +14,12 @@ const enrollmentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    completedLectures: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Lecture",
+      },
+    ],
   },
   { timestamps: true },
 );
