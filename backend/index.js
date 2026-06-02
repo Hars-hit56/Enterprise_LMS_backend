@@ -12,6 +12,7 @@ import userRouter from "./route/userRoute.js";
 import enrollmentRouter from "./route/enrollmentRoute.js";
 import assessmentRouter from "./route/assessmentRoute.js";
 import analyticsRouter from "./route/analyticsRoute.js";
+import recommendationRouter from "./route/recommendationRoute.js";
 
 
 const PORT = process.env.PORT;
@@ -33,6 +34,7 @@ app.use("/api/user", userRouter);
 app.use("/api/enrollment", enrollmentRouter);
 app.use("/api/assessment", assessmentRouter);
 app.use("/api/analytics", analyticsRouter);
+app.use("/api/recommendations", recommendationRouter);
 
 app.get("/", (req, res) => {
   res.json({ message: "Server running" });
