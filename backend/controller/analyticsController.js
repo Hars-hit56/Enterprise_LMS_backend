@@ -4,6 +4,44 @@ import Enrollment from "../model/enrollmentModel.js";
 import AssessmentResult from "../model/assessmentResultModel.js";
 import Assessment from "../model/assessmentModel.js";
 
+const normalizeProgress = (progress) => {
+  const value = Number(progress || 0);
+  return Math.min(Math.max(value, 0), 100);
+};
+
+const buildCourseProgressData = (courses, enrollments) => {
+  const enrollmentsByCourse = new Map();
+
+  enrollments.forEach((enrollment) => {
+    const courseId = enrollment.courseId?.toString();
+    if (!courseId) return;
+
+    const courseEnrollments = enrollmentsByCourse.get(courseId) || [];
+    courseEnrollments.push(enrollment);
+    enrollmentsByCourse.set(courseId, courseEnrollments);
+  });
+
+  return courses.map((course) => {
+    const courseEnrollments = enrollmentsByCourse.get(course._id.toString()) || [];
+    const totalProgress = courseEnrollments.reduce(
+      (sum, enrollment) => sum + normalizeProgress(enrollment.progress),
+      0,
+    );
+    const progress = courseEnrollments.length
+      ? Math.round(totalProgress / courseEnrollments.length)
+      : 0;
+
+    return {
+      name: course.title,
+      progress,
+      enrollments: courseEnrollments.length,
+      completed: courseEnrollments.filter(
+        (enrollment) => normalizeProgress(enrollment.progress) >= 100,
+      ).length,
+    };
+  });
+};
+
 export const getAdminStats = async (req, res) => {
   try {
     const totalUsers = await User.countDocuments();
@@ -18,6 +56,7 @@ export const getAdminStats = async (req, res) => {
 
     // Revenue and Lessons Calculation
     const allCourses = await Course.find();
+    const allEnrollments = await Enrollment.find();
     let totalRevenue = 0;
     let totalLessons = 0;
 
@@ -64,24 +103,14 @@ export const getAdminStats = async (req, res) => {
       });
     }
 
-    // 2. Progress Tracking (Last 6 Weeks)
-    const progressData = [];
-    const allEnrollments = await Enrollment.find();
-
-    for (let i = 5; i >= 0; i--) {
-      const weekEnd = new Date();
-      weekEnd.setDate(weekEnd.getDate() - (i * 7));
-
-      const enrollmentsUpToNow = allEnrollments.filter(e => new Date(e.createdAt) <= weekEnd);
-      const avgProgress = enrollmentsUpToNow.length > 0
-        ? enrollmentsUpToNow.reduce((acc, curr) => acc + (curr.progress || 0), 0) / enrollmentsUpToNow.length
-        : 0;
-
-      progressData.push({
-        name: `Week ${6 - i}`,
-        progress: Math.round(avgProgress)
-      });
-    }
+    // 2. Course Progress Tracking
+    const progressData = buildCourseProgressData(allCourses, allEnrollments);
+    const completedEnrollments = allEnrollments.filter(
+      (enrollment) => normalizeProgress(enrollment.progress) >= 100,
+    ).length;
+    const completionRate = allEnrollments.length
+      ? Math.round((completedEnrollments / allEnrollments.length) * 100)
+      : 0;
 
     res.json({
       totalUsers,
@@ -93,7 +122,7 @@ export const getAdminStats = async (req, res) => {
       totalRevenue,
       totalLessons,
       activeCourses,
-      completionRate: 70, // Placeholder
+      completionRate,
       engagementData,
       progressData
     });
@@ -175,33 +204,9 @@ export const getInstructorStats = async (req, res) => {
       });
     }
 
-    // 2. Progress Tracking (Last 6 Weeks)
-    const sixWeeksAgo = new Date();
-    sixWeeksAgo.setDate(sixWeeksAgo.getDate() - 42); // 6 * 7 days
-
+    // 2. Course Progress Tracking
     const allEnrollments = await Enrollment.find({ courseId: { $in: courseIds } });
-
-    const progressData = [];
-    for (let i = 5; i >= 0; i--) {
-      const weekEnd = new Date();
-      weekEnd.setDate(weekEnd.getDate() - (i * 7));
-      const weekStart = new Date(weekEnd);
-      weekStart.setDate(weekStart.getDate() - 7);
-
-      const enrollmentsInWeek = allEnrollments.filter(e => {
-        const created = new Date(e.createdAt);
-        return created <= weekEnd;
-      });
-
-      const avgProgress = enrollmentsInWeek.length > 0
-        ? enrollmentsInWeek.reduce((acc, curr) => acc + (curr.progress || 0), 0) / enrollmentsInWeek.length
-        : 0;
-
-      progressData.push({
-        name: `Week ${6 - i}`,
-        progress: Math.round(avgProgress)
-      });
-    }
+    const progressData = buildCourseProgressData(courses, allEnrollments);
 
     res.json({
       totalCourses,
