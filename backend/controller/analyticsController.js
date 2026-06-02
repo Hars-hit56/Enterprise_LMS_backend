@@ -289,9 +289,34 @@ export const getInstructorStudents = async (req, res) => {
 };
 
 export const getStudentStats = async (req, res) => {
-  res.json({
-    enrolledCourses: 3,
-    completedCourses: 1,
-    avgScore: 80,
-  });
+  try {
+    const userId = req.userId;
+
+    const enrollments = await Enrollment.find({ userId }).populate("courseId");
+    const assessmentResults = await AssessmentResult.find({ userId });
+
+    const enrolledCourses = enrollments.length;
+    const completedCourses = enrollments.filter((enrollment) => {
+      if (!enrollment.courseId) return false;
+
+      return calculateEnrollmentProgress(enrollment, enrollment.courseId) >= 100;
+    }).length;
+    const avgScore = assessmentResults.length
+      ? Math.round(
+          assessmentResults.reduce(
+            (sum, result) => sum + Number(result.percentage || 0),
+            0,
+          ) / assessmentResults.length,
+        )
+      : 0;
+
+    res.json({
+      enrolledCourses,
+      completedCourses,
+      avgScore,
+    });
+  } catch (error) {
+    console.error("Student Stats Error:", error);
+    res.status(500).json({ message: "Failed to fetch student stats" });
+  }
 };

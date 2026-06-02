@@ -23,9 +23,26 @@ export const createAssessment = async (req, res) => {
 // GET ASSESSMENT BY COURSE
 export const getAssessmentByCourse = async (req, res) => {
   try {
-    const assessment = await Assessment.find({
+    const assessments = await Assessment.find({
       courseId: req.params.courseId,
-    });
+    }).lean();
+
+    const attemptedAssessmentIds = await AssessmentResult.distinct(
+      "assessmentId",
+      {
+        userId: req.userId,
+        assessmentId: { $in: assessments.map((assessment) => assessment._id) },
+      },
+    );
+
+    const attemptedAssessmentIdSet = new Set(
+      attemptedAssessmentIds.map((assessmentId) => assessmentId.toString()),
+    );
+
+    const assessment = assessments.map((item) => ({
+      ...item,
+      attempted: attemptedAssessmentIdSet.has(item._id.toString()) ? 1 : 0,
+    }));
 
     res.status(200).json({
       success: true,
